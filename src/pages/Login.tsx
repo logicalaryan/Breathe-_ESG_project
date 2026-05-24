@@ -7,8 +7,8 @@ import { LayoutDashboard } from "lucide-react"
 
 export function Login() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState("sarah@acmecorp.com")
-  const [password, setPassword] = useState("••••••••")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") === "true") {
@@ -19,15 +19,15 @@ export function Login() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     localStorage.setItem("isAuthenticated", "true")
-    localStorage.setItem("userEmail", email)
-    
+    localStorage.setItem("userEmail", email || "sarah@acmecorp.com")
+
     // Dynamically derive a professional formatted name from the email
-    const emailPrefix = email.split('@')[0] || "sarah";
+    const emailPrefix = (email || "sarah@acmecorp.com").split('@')[0];
     const nameParts = emailPrefix.split(/[._\-+]/);
     const formattedName = nameParts
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ') + " Analyst";
-      
+
     localStorage.setItem("userName", formattedName)
     navigate("/")
   }
@@ -37,7 +37,7 @@ export function Login() {
       <div className="w-full max-w-[400px] space-y-6">
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="h-12 w-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white mb-4 shadow-lg shadow-emerald-500/20">
-             <LayoutDashboard size={24} />
+            <LayoutDashboard size={24} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-zinc-50">
             Welcome to Breath ESG
@@ -51,10 +51,11 @@ export function Login() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Work Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                required 
+              <Input
+                id="email"
+                type="email"
+                required
+                placeholder="sarah@acmecorp.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
               />
@@ -66,10 +67,11 @@ export function Login() {
                   Forgot password?
                 </a>
               </div>
-              <Input 
-                id="password" 
-                type="password" 
+              <Input
+                id="password"
+                type="password"
                 required
+                placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
               />
@@ -88,10 +90,10 @@ export function Login() {
               </span>
             </div>
           </div>
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="w-full" 
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
             size="lg"
             onClick={handleLogin}
           >
