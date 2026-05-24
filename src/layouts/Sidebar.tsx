@@ -1,5 +1,5 @@
-import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, UploadCloud, CheckSquare, History, Settings } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, UploadCloud, CheckSquare, History, Settings, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
@@ -11,6 +11,13 @@ const navigation = [
 ];
 
 export function Sidebar() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/login");
+  };
+
   return (
     <div className="flex flex-col w-64 bg-slate-50 border-r min-h-screen dark:bg-zinc-950 dark:border-zinc-800">
       <div className="flex h-16 shrink-0 items-center px-6 border-b dark:border-zinc-800">
@@ -44,14 +51,23 @@ export function Sidebar() {
         ))}
       </nav>
       <div className="p-4 border-t dark:border-zinc-800">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-medium">
-            SA
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-medium shrink-0">
+              SA
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium text-slate-900 dark:text-zinc-50 truncate">Sarah Analyst</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400 truncate">sarah@acmecorp.com</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-slate-900 dark:text-zinc-50">Sarah Analyst</span>
-            <span className="text-xs text-slate-500 dark:text-zinc-400">sarah@acmecorp.com</span>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors shrink-0"
+            title="Log Out"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </div>
