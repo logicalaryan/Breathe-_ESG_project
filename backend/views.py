@@ -146,7 +146,7 @@ class ProcessSapProcurementView(APIView):
             facility_id = None
             if not werks_code:
                 validation_log.append(
-                    f"Row {row_number}: Missing Plant Code (WERKS). Row skipped."
+                    f"Row {row_number}: Plant Code is missing"
                 )
                 continue
 
@@ -165,7 +165,7 @@ class ProcessSapProcurementView(APIView):
                     }
             else:
                 validation_log.append(
-                    f"Row {row_number}: Plant Code '{werks_code}' not found in database. Procurement ignored."
+                    f"Row {row_number}: Plant Code {werks_code} not found in database"
                 )
                 continue
 
@@ -192,7 +192,7 @@ class ProcessSapProcurementView(APIView):
             
             if not raw_unit:
                 validation_log.append(
-                    f"Row {row_number}: Missing unit of measure (MEINS). Quantity kept in raw format."
+                    f"Row {row_number}: Unit is missing"
                 )
             elif raw_unit in UNIT_TRANSLATION_MAP:
                 unit_meta = UNIT_TRANSLATION_MAP[raw_unit]
@@ -200,7 +200,7 @@ class ProcessSapProcurementView(APIView):
                 normalized_quantity = (quantity_val * unit_meta["factor"]).quantize(Decimal("0.0001"))
             else:
                 validation_log.append(
-                    f"Row {row_number}: Unrecognized SAP unit '{raw_unit}'. Kept as raw value with no ESG conversions applied."
+                    f"Row {row_number}: Unit {raw_unit} is unrecognized"
                 )
 
             # --- FACT TABLE DATA MODEL ASSEMBLY ---

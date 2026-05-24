@@ -155,7 +155,7 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
             # Join simulation
             facility_id = None
             if not werks_code:
-                validation_log.append(f"Row {row_number}: Missing Plant Code (WERKS). Row skipped.")
+                validation_log.append(f"Row {row_number}: Plant Code is missing")
                 continue
 
             if werks_code in MOCK_FACILITY_DB:
@@ -171,7 +171,7 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
                         "region": facility_data["region"]
                     }
             else:
-                validation_log.append(f"Row {row_number}: Plant Code '{werks_code}' not found in database. Procurement ignored.")
+                validation_log.append(f"Row {row_number}: Plant Code {werks_code} not found in database")
                 continue
 
             # Parse numbers
@@ -192,13 +192,13 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
             target_unit = raw_unit
             
             if not raw_unit:
-                validation_log.append(f"Row {row_number}: Missing unit of measure (MEINS). Quantity kept in raw format.")
+                validation_log.append(f"Row {row_number}: Unit is missing")
             elif raw_unit in UNIT_TRANSLATION_MAP:
                 unit_meta = UNIT_TRANSLATION_MAP[raw_unit]
                 target_unit = unit_meta["target"]
                 normalized_quantity = (quantity_val * unit_meta["factor"]).quantize(Decimal("0.0001"))
             else:
-                validation_log.append(f"Row {row_number}: Unrecognized SAP unit '{raw_unit}'. Kept as raw value with no ESG conversions applied.")
+                validation_log.append(f"Row {row_number}: Unit {raw_unit} is unrecognized")
 
             # Append fact record
             procurement_fact = {
