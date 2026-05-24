@@ -1,9 +1,27 @@
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LayoutDashboard } from "lucide-react"
 
 export function Login() {
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("sarah@acmecorp.com")
+  const [password, setPassword] = useState("••••••••")
+
+  useEffect(() => {
+    if (localStorage.getItem("isAuthenticated") === "true") {
+      navigate("/", { replace: true })
+    }
+  }, [navigate])
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    localStorage.setItem("isAuthenticated", "true")
+    navigate("/")
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-zinc-950 p-4">
       <div className="w-full max-w-[400px] space-y-6">
@@ -19,11 +37,17 @@ export function Login() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border dark:border-zinc-800 space-y-6">
+        <form onSubmit={handleLogin} className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border dark:border-zinc-800 space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Work Email</Label>
-              <Input id="email" type="email" placeholder="sarah@acmecorp.com" />
+              <Input 
+                id="email" 
+                type="email" 
+                required 
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -32,10 +56,16 @@ export function Login() {
                   Forgot password?
                 </a>
               </div>
-              <Input id="password" type="password" />
+              <Input 
+                id="password" 
+                type="password" 
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
             </div>
           </div>
-          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" size="lg">
+          <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" size="lg">
             Sign In
           </Button>
           <div className="relative">
@@ -48,10 +78,16 @@ export function Login() {
               </span>
             </div>
           </div>
-          <Button variant="outline" className="w-full" size="lg">
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full" 
+            size="lg"
+            onClick={handleLogin}
+          >
             Single Sign-On (SSO)
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   )
