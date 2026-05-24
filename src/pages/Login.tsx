@@ -19,6 +19,16 @@ export function Login() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     localStorage.setItem("isAuthenticated", "true")
+    localStorage.setItem("userEmail", email)
+    
+    // Dynamically derive a professional formatted name from the email
+    const emailPrefix = email.split('@')[0] || "sarah";
+    const nameParts = emailPrefix.split(/[._\-+]/);
+    const formattedName = nameParts
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ') + " Analyst";
+      
+    localStorage.setItem("userName", formattedName)
     navigate("/")
   }
 

@@ -13,8 +13,22 @@ const navigation = [
 export function Sidebar() {
   const navigate = useNavigate();
 
+  const userEmail = localStorage.getItem("userEmail") || "sarah@acmecorp.com";
+  const userName = localStorage.getItem("userName") || "Sarah Analyst";
+
+  // Derive initials dynamically for avatar
+  const initials = userName
+    .split(' ')
+    .filter(Boolean)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || "SA";
+
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userName");
     navigate("/login");
   };
 
@@ -52,13 +66,13 @@ export function Sidebar() {
       </nav>
       <div className="p-4 border-t dark:border-zinc-800">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-medium shrink-0">
-              SA
+              {initials}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-slate-900 dark:text-zinc-50 truncate">Sarah Analyst</span>
-              <span className="text-xs text-slate-500 dark:text-zinc-400 truncate">sarah@acmecorp.com</span>
+              <span className="text-sm font-medium text-slate-900 dark:text-zinc-50 truncate">{userName}</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400 truncate">{userEmail}</span>
             </div>
           </div>
           <button
