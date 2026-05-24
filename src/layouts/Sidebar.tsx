@@ -13,8 +13,8 @@ const navigation = [
 export function Sidebar() {
   const navigate = useNavigate();
 
-  const userEmail = localStorage.getItem("userEmail") || "sarah@acmecorp.com";
-  const userName = localStorage.getItem("userName") || "Sarah Analyst";
+  const userEmail = sessionStorage.getItem("userEmail") || "sarah@acmecorp.com";
+  const userName = sessionStorage.getItem("userName") || "Sarah Analyst";
 
   // Derive initials dynamically for avatar
   const initials = userName
@@ -26,9 +26,9 @@ export function Sidebar() {
     .slice(0, 2) || "SA";
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userName");
+    sessionStorage.removeItem("isAuthenticated");
+    sessionStorage.removeItem("userEmail");
+    sessionStorage.removeItem("userName");
     navigate("/login");
   };
 

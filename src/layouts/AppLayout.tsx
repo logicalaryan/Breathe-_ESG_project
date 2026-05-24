@@ -3,7 +3,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
 export function AppLayout() {
-  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const isAuthenticated = sessionStorage.getItem("isAuthenticated") === "true";
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

@@ -11,15 +11,15 @@ export function Login() {
   const [password, setPassword] = useState("")
 
   useEffect(() => {
-    if (localStorage.getItem("isAuthenticated") === "true") {
+    if (sessionStorage.getItem("isAuthenticated") === "true") {
       navigate("/", { replace: true })
     }
   }, [navigate])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    localStorage.setItem("isAuthenticated", "true")
-    localStorage.setItem("userEmail", email || "sarah@acmecorp.com")
+    sessionStorage.setItem("isAuthenticated", "true")
+    sessionStorage.setItem("userEmail", email || "sarah@acmecorp.com")
 
     // Dynamically derive a professional formatted name from the email
     const emailPrefix = (email || "sarah@acmecorp.com").split('@')[0];
@@ -28,7 +28,7 @@ export function Login() {
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ') + " Analyst";
 
-    localStorage.setItem("userName", formattedName)
+    sessionStorage.setItem("userName", formattedName)
     navigate("/")
   }
 
