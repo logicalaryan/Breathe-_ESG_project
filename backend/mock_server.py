@@ -3,7 +3,10 @@ import socketserver
 import csv
 import io
 import json
-from decimal import Decimal, InvalidOperation
+import calendar
+from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from collections import defaultdict
 
 PORT = 8000
 
@@ -52,17 +55,112 @@ SAP_HEADER_MAPPING = {
 
 class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
-        if self.path != "/api/process-sap/":
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Not Found")
+        # Route: Utility Allocation
+        if self.path == "/api/utility-allocation/":
+            self.handle_utility_allocation()
             return
 
-        # Read the raw content length
+        # Route: SAP CSV Processor
+        if self.path == "/api/process-sap/":
+            self.handle_sap_processor()
+            return
+
+        # 404
+        self.send_response(404)
+        self.end_headers()
+        self.wfile.write(b"Not Found")
+
+    def handle_utility_allocation(self):
         content_length = int(self.headers.get('Content-Length', 0))
         raw_body = self.rfile.read(content_length)
 
-        # Basic multipart/form-data boundary parsing to extract file content
+        try:
+            payload = json.loads(raw_body.decode('utf-8'))
+        except json.JSONDecodeError:
+            self.send_error_response(400, "Invalid JSON payload")
+            return
+
+        start_date_str = payload.get('start_date')
+        end_date_str = payload.get('end_date')
+        total_kwh_raw = payload.get('total_kwh')
+
+        if not all([start_date_str, end_date_str, total_kwh_raw]):
+            self.send_error_response(400, "Missing required fields: start_date, end_date, or total_kwh")
+            return
+
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            total_kwh = Decimal(str(total_kwh_raw))
+        except ValueError as e:
+            self.send_error_response(400, f"Data format error: {str(e)}. Use YYYY-MM-DD for dates.")
+            return
+
+        if end_date < start_date:
+            self.send_error_response(400, "end_date must be strictly after start_date.")
+            return
+
+        total_days = (end_date - start_date).days + 1
+        if total_days <= 0:
+            self.send_error_response(400, "Invalid date range")
+            return
+
+        daily_kwh = total_kwh / Decimal(total_days)
+        monthly_buckets = defaultdict(Decimal)
+        current_date = start_date
+        
+        while current_date <= end_date:
+            month_key = current_date.strftime("%Y-%m")
+            monthly_buckets[month_key] += daily_kwh
+            current_date += timedelta(days=1)
+
+        espi_usage_summaries = []
+        
+        for month_key, kwh_val in monthly_buckets.items():
+            rounded_kwh = kwh_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            watt_hours = int(rounded_kwh * Decimal('1000'))
+            year, month = map(int, month_key.split('-'))
+            _, last_day_of_month = calendar.monthrange(year, month)
+            
+            bucket_start_date = max(start_date, datetime(year, month, 1).date())
+            bucket_end_date = min(end_date, datetime(year, month, last_day_of_month).date())
+            
+            bucket_duration_seconds = int((bucket_end_date - bucket_start_date + timedelta(days=1)).total_seconds())
+            bucket_start_epoch = int(datetime(bucket_start_date.year, bucket_start_date.month, bucket_start_date.day).timestamp())
+
+            usage_summary = {
+                "UsageSummary": {
+                    "billingPeriod": {
+                        "duration": bucket_duration_seconds,
+                        "start": bucket_start_epoch
+                    },
+                    "overallConsumption": {
+                        "powerOfTenMultiplier": "0",
+                        "uom": "72",
+                        "value": watt_hours
+                    },
+                    "qualityOfReading": "14",
+                    "statusTimeStamp": int(datetime.now().timestamp()),
+                    "description": f"Pro-rata allocated consumption for {bucket_start_date.strftime('%B %Y')}"
+                }
+            }
+            espi_usage_summaries.append(usage_summary)
+
+        response_payload = {
+            "metadata": {
+                "algorithm": "Daily Pro-Rata Allocation",
+                "total_days_evaluated": total_days,
+                "total_kwh_distributed": float(total_kwh),
+            },
+            "allocated_data": espi_usage_summaries
+        }
+        self.send_success_response(response_payload)
+
+
+    def handle_sap_processor(self):
+        content_length = int(self.headers.get('Content-Length', 0))
+        raw_body = self.rfile.read(content_length)
+
         content_type = self.headers.get('Content-Type', '')
         csv_text = ""
         
@@ -72,47 +170,32 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
                 parts = raw_body.split(b"--" + boundary)
                 for part in parts:
                     if b"Content-Disposition" in part and b"filename=" in part:
-                        # Extract the body of the file part
                         subparts = part.split(b"\r\n\r\n")
                         if len(subparts) > 1:
                             file_content = subparts[1].rsplit(b"\r\n", 1)[0]
                             csv_text = file_content.decode('utf-8')
                             break
             except Exception as e:
-                self.send_response(400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": f"Failed to parse multipart request: {str(e)}"}).encode())
+                self.send_error_response(400, f"Failed to parse multipart request: {str(e)}")
                 return
         else:
-            # Fallback to plain CSV upload directly in post body
             try:
                 csv_text = raw_body.decode('utf-8')
             except UnicodeDecodeError:
-                self.send_response(400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(b'{"error": "Encoding issue, please use UTF-8"}')
+                self.send_error_response(400, "Encoding issue, please use UTF-8")
                 return
 
         if not csv_text.strip():
-            self.send_response(400)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(b'{"error": "CSV file content is empty"}')
+            self.send_error_response(400, "CSV file content is empty")
             return
 
-        # Parse CSV
         csv_data = io.StringIO(csv_text.strip())
         reader = csv.reader(csv_data)
         
         try:
             headers = next(reader)
         except StopIteration:
-            self.send_response(400)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(b'{"error": "Empty CSV Header row"}')
+            self.send_error_response(400, "Empty CSV Header row")
             return
 
         headers = [h.strip().upper() for h in headers]
@@ -120,13 +203,10 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
         missing_headers = [req for req in required_sap_headers if req not in headers]
         
         if missing_headers:
-            self.send_response(400)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({
+            self.send_success_response({
                 "error": f"Missing critical SAP headers: {missing_headers}",
                 "validation_log": [f"Failure: Missing required SAP headers {missing_headers}"]
-            }).encode())
+            }, status_code=400)
             return
 
         col_indices = {headers.index(sap_h): mapped_h for sap_h, mapped_h in SAP_HEADER_MAPPING.items() if sap_h in headers}
@@ -216,7 +296,6 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
             }
             procurement_events_fact.append(procurement_fact)
 
-        # Output payload
         response_payload = {
             "metadata": {
                 "status": "Success" if not any("skipped" in l.lower() for l in validation_log) else "Partial Success",
@@ -229,13 +308,20 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
                 "procurement_events": procurement_events_fact
             }
         }
+        self.send_success_response(response_payload)
 
-        # Send JSON response
-        self.send_response(200)
+    def send_error_response(self, code, message):
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": message}).encode())
+
+    def send_success_response(self, payload, status_code=200):
+        self.send_response(status_code)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(json.dumps(response_payload, indent=4).encode())
+        self.wfile.write(json.dumps(payload, indent=4).encode())
 
     # Enable CORS preflights
     def do_OPTIONS(self):
@@ -249,9 +335,11 @@ def run_server():
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("127.0.0.1", PORT), ESGProcessorHandler) as httpd:
         print("=" * 60)
-        print(f"  ESG SAP CSV PROCESSOR MOCK SERVER - RUNNING ON PORT {PORT}")
+        print(f"  ESG MOCK SERVER - RUNNING ON PORT {PORT}")
         print("=" * 60)
-        print("[*] Listening on http://127.0.0.1:8000/api/process-sap/")
+        print("[*] Listening on:")
+        print("    - http://127.0.0.1:8000/api/process-sap/")
+        print("    - http://127.0.0.1:8000/api/utility-allocation/")
         print("[*] Press Ctrl+C to terminate.")
         print("-" * 60)
         try:
