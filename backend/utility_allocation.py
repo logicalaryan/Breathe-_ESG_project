@@ -1,4 +1,3 @@
-import json
 import calendar
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
@@ -11,8 +10,15 @@ from collections import defaultdict
 class UtilityProRataAllocationView(APIView):
     """
     Django REST Framework View for Utility Carbon Accounting.
-    Handles the ingestion of raw utility bills and performs a strict daily 
-    pro-rata allocation of energy consumption across calendar months.
+
+    GHG Protocol Classification: Scope 2 — Indirect Emissions from Purchased Electricity.
+    Source: GHG Protocol Corporate Accounting and Reporting Standard (WRI/WBCSD).
+    Consolidation approach: Operational Control.
+
+    Handles the ingestion of raw utility electricity bills and performs a strict
+    daily pro-rata allocation of energy consumption across calendar months.
+    Output is aligned to the Green Button ESPI (Energy Services Provider Interface)
+    UsageSummary standard (NAESB REQ.18).
     """
     parser_classes = [JSONParser]
 
@@ -32,29 +38,40 @@ class UtilityProRataAllocationView(APIView):
         #    extract the start_date, end_date, and total_kwh is omitted here. 
         #    We assume the upstream OCR layer has already successfully parsed 
         #    the PDF into the clean JSON payload that we are receiving below.
+        #
+        # [WHAT IS INCLUDED - ESTIMATED READ FLAGGING]
+        #    Utility meters sometimes produce estimated reads (e.g., when a 
+        #    physical inspection is missed). Per the Green Button ESPI standard,
+        #    qualityOfReading code "8" = Estimated and "14" = Validated.
+        #    Rather than rejecting estimated reads (which would create data gaps),
+        #    we accept them and flag each ESPI UsageSummary accordingly so 
+        #    downstream auditors and ESG reviewers can apply manual validation.
         # =====================================================================
 
+        payload = request.data
+        start_date_str = payload.get('start_date')
+        end_date_str = payload.get('end_date')
+        total_kwh_raw = payload.get('total_kwh')
+        # Optional field: is_estimated (bool, default False)
+        # When True, ESPI qualityOfReading is set to "8" (Estimated) instead
+        # of "14" (Validated), flagging the record for manual review.
+        is_estimated = bool(payload.get('is_estimated', False))
+
+        if not all([start_date_str, end_date_str, total_kwh_raw]):
+            return JsonResponse(
+                {"error": "Missing required fields: start_date, end_date, or total_kwh"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
-            payload = request.data
-            start_date_str = payload.get('start_date')
-            end_date_str = payload.get('end_date')
-            total_kwh_raw = payload.get('total_kwh')
-
-            if not all([start_date_str, end_date_str, total_kwh_raw]):
-                return JsonResponse(
-                    {"error": "Missing required fields: start_date, end_date, or total_kwh"}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
             # Standardizing date parsing (assuming YYYY-MM-DD input, or parsing specific strings)
             # For flexibility in this assessment, we'll parse standard ISO formats
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
             total_kwh = Decimal(str(total_kwh_raw))
-
         except ValueError as e:
             return JsonResponse(
-                {"error": f"Data format error: {str(e)}. Use YYYY-MM-DD for dates."}, 
+                {"error": f"Data format error: {str(e)}. Use YYYY-MM-DD for dates."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -117,7 +134,9 @@ class UtilityProRataAllocationView(APIView):
                         "uom": "72",                  # ESPI code for Watt-hours (Wh)
                         "value": watt_hours
                     },
-                    "qualityOfReading": "14",         # ESPI code for 'Validated'
+                    # ESPI qualityOfReading: "8" = Estimated (needs manual review),
+                    # "14" = Validated (actual meter read, audit-safe).
+                    "qualityOfReading": "8" if is_estimated else "14",
                     "statusTimeStamp": int(datetime.now().timestamp()),
                     "description": f"Pro-rata allocated consumption for {bucket_start_date.strftime('%B %Y')}"
                 }
@@ -130,6 +149,8 @@ class UtilityProRataAllocationView(APIView):
                 "algorithm": "Daily Pro-Rata Allocation",
                 "total_days_evaluated": total_days,
                 "total_kwh_distributed": float(total_kwh),
+                "read_quality": "Estimated - Flagged for Manual Validation" if is_estimated else "Validated",
+                "espi_quality_of_reading_code": "8" if is_estimated else "14",
             },
             "allocated_data": espi_usage_summaries
         }

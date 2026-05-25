@@ -2,12 +2,11 @@ import os
 import sys
 import json
 
+requests = None
 try:
     import requests
 except ImportError:
-    print("Error: The 'requests' library is required to run this test script.")
-    print("Please install it by running: pip install requests")
-    sys.exit(1)
+    pass
 
 # API Endpoint URL (Adjust port/host according to your Django local dev server)
 API_URL = "http://127.0.0.1:8000/api/process-sap/"
@@ -21,6 +20,11 @@ def test_sap_processor():
     print("  BREATH ESG - SAP CSV PROCESSOR TEST UTILITY")
     print("=" * 60)
     
+    if requests is None:
+        print("Error: The 'requests' library is required to run this test script.")
+        print("Please install it by running: pip install requests")
+        sys.exit(1)
+        
     if not os.path.exists(CSV_PATH):
         print(f"Error: Sample data file not found at {CSV_PATH}")
         sys.exit(1)

@@ -1,0 +1,16 @@
+{
+  "pythonVersion": "3.14",
+  "pythonPlatform": "Windows",
+  "venvPath": "C:\\Users\\KIIT0001\\AppData\\Local\\Python\\pythoncore-3.14-64",
+  "extraPaths": [
+    "C:\\Users\\KIIT0001\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages",
+    "backend"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".git"
+  ],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none"
+}
