@@ -99,8 +99,8 @@ export function Upload() {
     } catch (err) {
       setUploadState("error")
       setErrorMsg(
-        "Could not connect to the backend server. " +
-        "Start the mock server with: python backend/mock_server.py"
+        `Could not connect to backend: ${API_BASE}. ` +
+        "If on Render free tier, the server may be waking up — wait 60s and try again."
       )
     }
   }
