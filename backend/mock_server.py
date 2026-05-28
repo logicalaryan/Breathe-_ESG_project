@@ -236,8 +236,9 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
             return
 
         required = {"employee_id", "expense_date", "expense_category"}
-        normalised_hdrs = {h.strip().lower() for h in reader.fieldnames}
+        normalised_hdrs = {h.strip().lower() for h in reader.fieldnames if h is not None}
         missing = required - normalised_hdrs
+
         if missing:
             self.send_error_response(400, f"Missing CSV columns: {sorted(missing)}")
             return
@@ -353,7 +354,7 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
 
         for raw_row in reader:
             row_number += 1
-            row = {k.strip().lower(): (v.strip() if v else "") for k, v in raw_row.items()}
+            row = {k.strip().lower(): (v.strip() if v else "") for k, v in raw_row.items() if k is not None}
             if not any(row.values()):
                 continue
 
