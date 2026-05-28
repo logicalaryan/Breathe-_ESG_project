@@ -56,6 +56,16 @@ SAP_HEADER_MAPPING = {
 }
 
 class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        """Health check endpoint — returns server status with CORS headers."""
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+        self.wfile.write(json.dumps({"status": "ok", "message": "Breathe ESG backend is running."}).encode())
+
     def do_POST(self):
         # Route: Utility Allocation
         if self.path == "/api/utility-allocation/":
@@ -74,8 +84,11 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
 
         # 404
         self.send_response(404)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(b"Not Found")
+        self.wfile.write(json.dumps({"error": "Not Found"}).encode())
+
 
     def handle_utility_allocation(self):
         content_length = int(self.headers.get('Content-Length', 0))

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { UploadCloud, FileType, CheckCircle2, AlertCircle, Loader2, X, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,7 +37,17 @@ export function Upload() {
   const [response, setResponse]       = useState<ApiResponse | null>(null)
   const [errorMsg, setErrorMsg]       = useState<string>("")
   const [showLogs, setShowLogs]       = useState(false)
+  const [serverReady, setServerReady] = useState<"pinging" | "ready" | "idle">("idle")
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Wake up Render free-tier backend the moment this page loads
+  useEffect(() => {
+    if (isLocal) return // skip ping on localhost
+    setServerReady("pinging")
+    fetch(API_BASE, { method: "GET", signal: AbortSignal.timeout(60000) })
+      .catch(() => { /* 501 response or network error — server is awake either way */ })
+      .finally(() => setServerReady("ready"))
+  }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null
@@ -125,6 +135,20 @@ export function Upload() {
           Securely ingest SAP CSVs, utility bills, or corporate travel expense reports.
         </p>
       </div>
+
+      {/* Server warm-up status banner (production only) */}
+      {!isLocal && serverReady === "pinging" && (
+        <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-4 py-2.5">
+          <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+          Warming up the processing server — this takes up to 60 seconds on first load. Please wait before uploading.
+        </div>
+      )}
+      {!isLocal && serverReady === "ready" && (
+        <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg px-4 py-2.5">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+          Processing server is ready. You may now upload your file.
+        </div>
+      )}
 
       <Card className="shadow-sm border-none ring-1 ring-slate-900/5 dark:ring-white/10">
         <CardHeader>
