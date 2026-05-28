@@ -398,16 +398,34 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
             elif category == "HOTEL":
                 nights_raw  = row.get("nights", "").strip()
                 country_raw = row.get("hotel_country", "").strip().lower()
-                if not nights_raw:
-                    validation_log.append(f"Row {row_number} [HOTEL]: 'nights' missing. Skipped.")
-                    skipped_rows += 1; continue
+                city_raw    = row.get("hotel_city", "").strip()
+                
+                # Resilient recovery from CSV column shift (extra commas)
+                nights = None
                 try:
                     nights = int(float(nights_raw))
-                    if nights <= 0: raise ValueError
                 except ValueError:
+                    # Auto-detect if nights got shifted into the transport_vendor column
+                    vendor_raw = row.get("transport_vendor", "").strip()
+                    try:
+                        nights = int(float(vendor_raw))
+                        country_raw = row.get("nights", "").strip().lower()
+                        city_raw = row.get("hotel_country", "").strip()
+                    except ValueError:
+                        # Auto-detect if nights got shifted into the distance_km column
+                        dist_raw = row.get("distance_km", "").strip()
+                        try:
+                            nights = int(float(dist_raw))
+                            country_raw = row.get("transport_vendor", "").strip().lower()
+                            city_raw = row.get("nights", "").strip()
+                        except ValueError:
+                            pass
+
+                if nights is None or nights <= 0:
                     validation_log.append(f"Row {row_number} [HOTEL]: Invalid nights '{nights_raw}'. Skipped.")
                     skipped_rows += 1; continue
                 region = COUNTRY_REGION.get(country_raw, "default")
+
                 if region == "default" and country_raw:
                     validation_log.append(
                         f"Row {row_number} [HOTEL]: Country '{country_raw}' not mapped. Used global average."
