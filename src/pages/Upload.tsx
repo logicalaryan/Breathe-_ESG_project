@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 
-// Mock server base URL — dynamically configured via env vars in production
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000"
+// Mock server base URL — automatically falls back to Render in production
+const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname.includes("192.168.");
+const API_BASE = import.meta.env.VITE_API_BASE || (isLocal ? "http://127.0.0.1:8000" : "https://breathe-esg-project-1.onrender.com");
 
 const ENDPOINTS: Record<string, string> = {
   sap:     "/api/process-sap/",
