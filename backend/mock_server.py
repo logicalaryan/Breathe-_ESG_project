@@ -77,27 +77,31 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
 
 
     def do_POST(self):
-        # Route: Utility Allocation
-        if self.path == "/api/utility-allocation/":
-            self.handle_utility_allocation()
-            return
+        try:
+            # Route: Utility Allocation
+            if self.path == "/api/utility-allocation/":
+                self.handle_utility_allocation()
+                return
 
-        # Route: SAP CSV Processor
-        if self.path == "/api/process-sap/":
-            self.handle_sap_processor()
-            return
+            # Route: SAP CSV Processor
+            if self.path == "/api/process-sap/":
+                self.handle_sap_processor()
+                return
 
-        # Route: Corporate Travel Emissions (Scope 3 Category 6)
-        if self.path == "/api/travel-emissions/":
-            self.handle_travel_emissions()
-            return
+            # Route: Corporate Travel Emissions (Scope 3 Category 6)
+            if self.path == "/api/travel-emissions/":
+                self.handle_travel_emissions()
+                return
 
-        # 404
-        self.send_response(404)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(json.dumps({"error": "Not Found"}).encode())
+            # 404
+            self.send_response(404)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Not Found"}).encode())
+        except Exception as e:
+            self.send_error_response(500, f"Internal Server Error: {str(e)}")
+
 
 
     def handle_utility_allocation(self):
@@ -663,14 +667,6 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(payload, indent=4).encode())
-
-    # Enable CORS preflights
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
 
 def run_server():
     socketserver.TCPServer.allow_reuse_address = True
