@@ -5,11 +5,12 @@ import io
 import json
 import math
 import calendar
+import os
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from collections import defaultdict
 
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 
 # =====================================================================
 # Database Simulation: Mapped Facility Dimension Records
@@ -650,7 +651,7 @@ class ESGProcessorHandler(http.server.BaseHTTPRequestHandler):
 
 def run_server():
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("127.0.0.1", PORT), ESGProcessorHandler) as httpd:
+    with socketserver.TCPServer(("0.0.0.0", PORT), ESGProcessorHandler) as httpd:
         print("=" * 60)
         print(f"  ESG MOCK SERVER - RUNNING ON PORT {PORT}")
         print("=" * 60)

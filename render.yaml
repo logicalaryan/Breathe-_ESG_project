@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: breathe-esg-backend
+    env: python
+    buildCommand: ""
+    startCommand: "python backend/mock_server.py"
+    envVars:
+      - key: PORT
+        value: 8000

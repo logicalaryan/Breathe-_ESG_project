@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 
-// Mock server base URL — update to Django server URL in production
-const API_BASE = "http://127.0.0.1:8000"
+// Mock server base URL — dynamically configured via env vars in production
+const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000"
 
 const ENDPOINTS: Record<string, string> = {
   sap:     "/api/process-sap/",
